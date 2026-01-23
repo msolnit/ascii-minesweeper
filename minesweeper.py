@@ -77,26 +77,42 @@ class MinesweeperGame:
         os.system('clear' if os.name == 'posix' else 'cls')
         print("ASCII MINESWEEPER")
         print(f"Mines: {self.mines}")
-        
-        # Print column numbers
+
+        # Print column numbers at top
         print("   ", end="")
         for x in range(self.width):
             print(f"{x % 10} ", end="")
-        print()
-        
+        # Add column numbers at top right if width >= 10
+        if self.width >= 10:
+            print("  ")
+        else:
+            print()
+
         # Print top border
         print("  +" + "-" * (self.width * 2 - 1) + "+")
-        
+
         # Print rows
         for y in range(self.height):
             print(f"{y % 10} |", end="")
             for x in range(self.width):
                 print(f"{self.display_board[y][x]} ", end="")
-            print("|")
-        
+            print("|", end="")
+            # Add row numbers on the right if height >= 10
+            if self.height >= 10:
+                print(f" {y % 10}")
+            else:
+                print()
+
         # Print bottom border
         print("  +" + "-" * (self.width * 2 - 1) + "+")
-        
+
+        # Print column numbers at bottom if width >= 10
+        if self.width >= 10:
+            print("   ", end="")
+            for x in range(self.width):
+                print(f"{x % 10} ", end="")
+            print()
+
         # Print game status
         if self.game_over:
             if self.win:
