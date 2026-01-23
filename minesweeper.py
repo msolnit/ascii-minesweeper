@@ -8,6 +8,7 @@ import random
 import os
 import sys
 import time
+import readline
 
 class MinesweeperGame:
     def __init__(self, width=10, height=10, mines=15):
