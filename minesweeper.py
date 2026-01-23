@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import readline
+import argparse
 
 class MinesweeperGame:
     def __init__(self, width=10, height=10, mines=15):
@@ -216,6 +217,13 @@ class MinesweeperGame:
         self.game_over = True
         return True
 
+def validate_game_settings(width, height, mines):
+    """Validate and clamp game settings to acceptable ranges."""
+    width = max(5, min(30, width))
+    height = max(5, min(30, height))
+    mines = max(1, min(width * height // 4, mines))
+    return width, height, mines
+
 def get_difficulty():
     """Get the difficulty level from the player."""
     print("Select difficulty:")
@@ -237,13 +245,8 @@ def get_difficulty():
                 width = int(input("Enter width (5-30): "))
                 height = int(input("Enter height (5-30): "))
                 mines = int(input(f"Enter number of mines (1-{width * height // 4}): "))
-                
-                # Validate custom settings
-                width = max(5, min(30, width))
-                height = max(5, min(30, height))
-                mines = max(1, min(width * height // 4, mines))
-                
-                return width, height, mines
+
+                return validate_game_settings(width, height, mines)
             else:
                 print("Invalid choice. Please enter a number between 1 and 4.")
         except ValueError:
@@ -271,13 +274,81 @@ def parse_command(command):
     except ValueError:
         return None, None, None
 
+def parse_arguments():
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description='ASCII Minesweeper - A command-line version of the classic Minesweeper game'
+    )
+
+    parser.add_argument(
+        '-d', '--difficulty',
+        choices=['e', 'easy', 'm', 'medium', 'h', 'hard'],
+        help='Difficulty level: e/easy, m/medium, h/hard'
+    )
+
+    parser.add_argument(
+        '-w', '--width',
+        type=int,
+        help='Board width (5-30, only for custom difficulty)'
+    )
+
+    parser.add_argument(
+        '-l', '--length',
+        type=int,
+        help='Board height (5-30, only for custom difficulty)'
+    )
+
+    parser.add_argument(
+        '-m', '--mines',
+        type=int,
+        help='Number of mines (only for custom difficulty)'
+    )
+
+    return parser.parse_args()
+
+def get_game_settings(args):
+    """Get game settings from command-line arguments or interactive mode."""
+    # Check if difficulty is specified
+    if args.difficulty:
+        diff = args.difficulty.lower()
+        if diff in ['e', 'easy']:
+            return 10, 10, 15
+        elif diff in ['m', 'medium']:
+            return 16, 16, 40
+        elif diff in ['h', 'hard']:
+            return 24, 24, 99
+
+    # Check if custom dimensions are provided
+    if args.width is not None or args.length is not None or args.mines is not None:
+        # Default to easy settings if not all custom parameters are provided
+        width = args.width if args.width is not None else 10
+        height = args.length if args.length is not None else 10
+
+        # Calculate default mines based on board size if not specified
+        if args.mines is not None:
+            mines = args.mines
+        else:
+            mines = max(1, (width * height) // 6)
+
+        return validate_game_settings(width, height, mines)
+
+    # No command-line arguments, use interactive mode
+    return None
+
 def main():
     """Main function to run the game."""
     print("Welcome to ASCII Minesweeper!")
     print("------------------------------")
-    
-    # Get difficulty settings
-    width, height, mines = get_difficulty()
+
+    # Parse command-line arguments
+    args = parse_arguments()
+
+    # Get difficulty settings from arguments or interactive mode
+    settings = get_game_settings(args)
+    if settings:
+        width, height, mines = settings
+    else:
+        width, height, mines = get_difficulty()
     
     # Create the game
     game = MinesweeperGame(width, height, mines)
