@@ -103,7 +103,7 @@ class MinesweeperGame:
             else:
                 print("Game over! You hit a mine.")
         else:
-            print("Commands: reveal x y, flag x y, unflag x y, quit")
+            print("Commands: r x y (reveal), f x y (flag), u x y (unflag), q (quit)")
     
     def reveal(self, x, y):
         """Reveal a cell at the specified coordinates."""
@@ -236,7 +236,7 @@ def parse_command(command):
     
     cmd = parts[0]
     
-    if cmd == 'quit':
+    if cmd == 'q':
         return cmd, None, None
     
     if len(parts) < 3:
@@ -268,17 +268,17 @@ def main():
         command = input("Enter command: ")
         cmd, x, y = parse_command(command)
         
-        if cmd == 'reveal':
+        if cmd == 'r':
             game.reveal(x, y)
-        elif cmd == 'flag':
+        elif cmd == 'f':
             game.flag(x, y)
-        elif cmd == 'unflag':
+        elif cmd == 'u':
             game.unflag(x, y)
-        elif cmd == 'quit':
+        elif cmd == 'q':
             print("Thanks for playing!")
             return
         else:
-            print("Invalid command. Try 'reveal x y', 'flag x y', 'unflag x y', or 'quit'.")
+            print("Invalid command. Try 'r x y', 'f x y', 'u x y', or 'q'.")
             time.sleep(1)
     
     # Final display after game over
