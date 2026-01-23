@@ -95,7 +95,12 @@ class MinesweeperGame:
         for y in range(self.height):
             print(f"{y % 10} |", end="")
             for x in range(self.width):
-                print(f"{self.display_board[y][x]} ", end="")
+                cell = self.display_board[y][x]
+                # Display flags in red
+                if cell == '⚑':
+                    print(f"\033[91m{cell}\033[0m ", end="")
+                else:
+                    print(f"{cell} ", end="")
             print("|", end="")
             # Add row numbers on the right if height >= 10
             if self.height >= 10:
