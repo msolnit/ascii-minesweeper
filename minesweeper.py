@@ -12,7 +12,7 @@ import readline
 import argparse
 
 class MinesweeperGame:
-    def __init__(self, width=10, height=10, mines=15):
+    def __init__(self, width=10, height=10, mines=15, lives=1):
         """Initialize the game with the specified dimensions and number of mines."""
         self.width = width
         self.height = height
@@ -22,6 +22,9 @@ class MinesweeperGame:
         self.first_move = True
         self.game_over = False
         self.win = False
+        self.lives = lives  # Current remaining lives
+        self.max_lives = lives  # Initial lives for UI display logic
+        self.triggered_mines = set()  # Set of (x, y) tuples for hit mines
         
         # Initialize the boards
         self.initialize_boards()
@@ -78,6 +81,9 @@ class MinesweeperGame:
         os.system('clear' if os.name == 'posix' else 'cls')
         print("ASCII MINESWEEPER")
         print(f"Mines: {self.mines}")
+        # Show lives counter only if max_lives > 1
+        if self.max_lives > 1:
+            print(f"Lives: {self.lives}")
 
         # Print column numbers at top
         print("   ", end="")
@@ -99,6 +105,9 @@ class MinesweeperGame:
                 cell = self.display_board[y][x]
                 # Display flags in red
                 if cell == '⚑':
+                    print(f"\033[91m{cell}\033[0m ", end="")
+                # Display triggered mines in red
+                elif (x, y) in self.triggered_mines and cell == 'X':
                     print(f"\033[91m{cell}\033[0m ", end="")
                 else:
                     print(f"{cell} ", end="")
@@ -124,7 +133,10 @@ class MinesweeperGame:
             if self.win:
                 print("You win! All mines flagged correctly.")
             else:
-                print("Game over! You hit a mine.")
+                if self.lives == 0:
+                    print("Game over! You ran out of lives.")
+                else:
+                    print("Game over! You hit a mine.")
         else:
             print("Commands: r x y (reveal), f x y (flag), u x y (unflag), q (quit)")
     
@@ -145,10 +157,15 @@ class MinesweeperGame:
         
         # Check if the cell contains a mine
         if self.board[y][x] == 'X':
+            self.lives -= 1
+            self.triggered_mines.add((x, y))
             self.display_board[y][x] = 'X'
-            self.game_over = True
-            self.reveal_all_mines()
-            return True
+
+            if self.lives == 0:
+                self.game_over = True
+                self.reveal_all_mines()
+
+            return 'mine'
         
         # Reveal the cell
         self.display_board[y][x] = self.board[y][x]
@@ -168,7 +185,18 @@ class MinesweeperGame:
         # Check if the player has won
         self.check_win()
         return True
-    
+
+    def handle_mine_hit(self):
+        """Handle the mine explosion animation and pause."""
+        self.display()
+        print("\nBOOM!")
+        if self.lives > 0:
+            life_word = "life" if self.lives == 1 else "lives"
+            print(f"You hit a mine! {self.lives} {life_word} remaining.")
+            input("Press Enter to continue...")
+        else:
+            print("You hit a mine!")
+
     def flag(self, x, y):
         """Flag a cell at the specified coordinates."""
         # Check if coordinates are valid
@@ -210,9 +238,11 @@ class MinesweeperGame:
             for x in range(self.width):
                 if self.board[y][x] != 'X' and self.display_board[y][x] in ['■', '⚑']:
                     return False
-                if self.board[y][x] == 'X' and self.display_board[y][x] != '⚑':
-                    return False
-        
+                # Allow triggered mines to count toward win condition
+                if self.board[y][x] == 'X':
+                    if (x, y) not in self.triggered_mines and self.display_board[y][x] != '⚑':
+                        return False
+
         self.win = True
         self.game_over = True
         return True
@@ -304,19 +334,27 @@ def parse_arguments():
         help='Number of mines (only for custom difficulty)'
     )
 
+    parser.add_argument(
+        '-v', '--lives',
+        type=int,
+        default=1,
+        help='Number of lives (default: 1)'
+    )
+
     return parser.parse_args()
 
 def get_game_settings(args):
-    """Get game settings from command-line arguments or interactive mode."""
+    """Get game settings from command-line arguments or interactive mode.
+    Returns (width, height, mines, lives) tuple."""
     # Check if difficulty is specified
     if args.difficulty:
         diff = args.difficulty.lower()
         if diff in ['e', 'easy']:
-            return 10, 10, 15
+            return 10, 10, 15, args.lives
         elif diff in ['m', 'medium']:
-            return 16, 16, 40
+            return 16, 16, 40, args.lives
         elif diff in ['h', 'hard']:
-            return 24, 24, 99
+            return 24, 24, 99, args.lives
 
     # Check if custom dimensions are provided
     if args.width is not None or args.length is not None or args.mines is not None:
@@ -330,7 +368,7 @@ def get_game_settings(args):
         else:
             mines = max(1, (width * height) // 6)
 
-        return validate_game_settings(width, height, mines)
+        return validate_game_settings(width, height, mines) + (args.lives,)
 
     # No command-line arguments, use interactive mode
     return None
@@ -346,12 +384,13 @@ def main():
     # Get difficulty settings from arguments or interactive mode
     settings = get_game_settings(args)
     if settings:
-        width, height, mines = settings
+        width, height, mines, lives = settings
     else:
         width, height, mines = get_difficulty()
-    
+        lives = 1  # Default lives for interactive mode
+
     # Create the game
-    game = MinesweeperGame(width, height, mines)
+    game = MinesweeperGame(width, height, mines, lives)
     
     # Main game loop
     while not game.game_over:
@@ -362,7 +401,9 @@ def main():
         cmd, x, y = parse_command(command)
         
         if cmd == 'r':
-            game.reveal(x, y)
+            result = game.reveal(x, y)
+            if result == 'mine':
+                game.handle_mine_hit()
         elif cmd == 'f':
             game.flag(x, y)
         elif cmd == 'u':
