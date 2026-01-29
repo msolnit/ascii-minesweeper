@@ -282,27 +282,55 @@ def get_difficulty():
         except ValueError:
             print("Invalid input. Please enter a number.")
 
-def parse_command(command):
-    """Parse a command string into a command and coordinates."""
-    parts = command.strip().lower().split()
-    
-    if not parts:
+def parse_command(command, game):
+    """Parse a command string into a command and coordinates.
+
+    Supports compact format (e.g., 'r56' for 'r 5 6') when unambiguous.
+    A compact format is unambiguous if only one way of splitting the digits
+    results in valid coordinates for the board dimensions.
+    """
+    command = command.strip().lower()
+
+    if not command:
         return None, None, None
-    
-    cmd = parts[0]
-    
-    if cmd == 'q':
-        return cmd, None, None
-    
-    if len(parts) < 3:
-        return None, None, None
-    
-    try:
-        x = int(parts[1])
-        y = int(parts[2])
-        return cmd, x, y
-    except ValueError:
-        return None, None, None
+
+    # Try standard space-separated format first
+    parts = command.split()
+
+    if parts[0] == 'q':
+        return 'q', None, None
+
+    # Standard format: "r 5 6"
+    if len(parts) == 3:
+        try:
+            x = int(parts[1])
+            y = int(parts[2])
+            return parts[0], x, y
+        except ValueError:
+            return None, None, None
+
+    # Try compact format: "r56"
+    if len(command) >= 3 and command[0] in ['r', 'f', 'u']:
+        cmd = command[0]
+        digits = command[1:]
+
+        # Try all possible ways to split digits into (x, y)
+        valid_splits = []
+        for split_pos in range(1, len(digits)):
+            try:
+                x = int(digits[:split_pos])
+                y = int(digits[split_pos:])
+                # Check if both coordinates are within board bounds
+                if 0 <= x < game.width and 0 <= y < game.height:
+                    valid_splits.append((x, y))
+            except ValueError:
+                continue
+
+        # Only use compact format if exactly one valid interpretation exists
+        if len(valid_splits) == 1:
+            return cmd, valid_splits[0][0], valid_splits[0][1]
+
+    return None, None, None
 
 def parse_arguments():
     """Parse command-line arguments."""
@@ -395,10 +423,10 @@ def main():
     # Main game loop
     while not game.game_over:
         game.display()
-        
+
         # Get player command
         command = input("Enter command: ")
-        cmd, x, y = parse_command(command)
+        cmd, x, y = parse_command(command, game)
         
         if cmd == 'r':
             result = game.reveal(x, y)
