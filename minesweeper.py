@@ -131,7 +131,7 @@ class MinesweeperGame:
         # Print game status
         if self.game_over:
             if self.win:
-                print("You win! All mines flagged correctly.")
+                print("🎉 You win! 🎉")
             else:
                 if self.lives == 0:
                     print("Game over! You ran out of lives.")
