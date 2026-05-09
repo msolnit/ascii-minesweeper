@@ -138,7 +138,7 @@ class MinesweeperGame:
                 else:
                     print("Game over! You hit a mine.")
         else:
-            print("Commands: r x y (reveal), f x y (flag), u x y (unflag), q (quit)")
+            print("Commands: r x y (reveal), c x y (chord), f x y (flag), u x y (unflag), q (quit)")
     
     def reveal(self, x, y):
         """Reveal a cell at the specified coordinates."""
@@ -224,6 +224,41 @@ class MinesweeperGame:
         
         return False
     
+    def chord(self, x, y):
+        """Chord reveal: if a numbered cell has the correct number of adjacent flags,
+        reveal all remaining hidden neighbors."""
+        if not (0 <= x < self.width and 0 <= y < self.height):
+            return False
+
+        cell = self.display_board[y][x]
+        if cell not in '12345678':
+            return False
+
+        adjacent_flags = 0
+        for dy in range(-1, 2):
+            for dx in range(-1, 2):
+                if dx == 0 and dy == 0:
+                    continue
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < self.width and 0 <= ny < self.height:
+                    if self.display_board[ny][nx] == '⚑':
+                        adjacent_flags += 1
+
+        if adjacent_flags != int(cell):
+            return 'mismatch'
+
+        results = []
+        for dy in range(-1, 2):
+            for dx in range(-1, 2):
+                if dx == 0 and dy == 0:
+                    continue
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < self.width and 0 <= ny < self.height:
+                    if self.display_board[ny][nx] == '■':
+                        results.append(self.reveal(nx, ny))
+
+        return results
+
     def reveal_all_mines(self):
         """Reveal all mines on the board."""
         for y in range(self.height):
@@ -310,7 +345,7 @@ def parse_command(command, game):
             return None, None, None
 
     # Try compact format: "r56"
-    if len(command) >= 3 and command[0] in ['r', 'f', 'u']:
+    if len(command) >= 3 and command[0] in ['r', 'f', 'u', 'c']:
         cmd = command[0]
         digits = command[1:]
 
@@ -432,6 +467,16 @@ def main():
             result = game.reveal(x, y)
             if result == 'mine':
                 game.handle_mine_hit()
+        elif cmd == 'c':
+            result = game.chord(x, y)
+            if result is False:
+                print("Chord requires a revealed numbered cell.")
+                time.sleep(1)
+            elif result == 'mismatch':
+                print("Flag count doesn't match the cell number.")
+                time.sleep(1)
+            elif any(r == 'mine' for r in result):
+                game.handle_mine_hit()
         elif cmd == 'f':
             game.flag(x, y)
         elif cmd == 'u':
@@ -440,7 +485,7 @@ def main():
             print("Thanks for playing!")
             return
         else:
-            print("Invalid command. Try 'r x y', 'f x y', 'u x y', or 'q'.")
+            print("Invalid command. Try 'r x y', 'c x y', 'f x y', 'u x y', or 'q'.")
             time.sleep(1)
     
     # Final display after game over
